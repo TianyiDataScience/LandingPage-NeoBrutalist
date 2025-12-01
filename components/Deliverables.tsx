@@ -1,6 +1,7 @@
 import React from 'react';
 import Section from './ui/Section';
 import { Box, Clock, Sliders, Zap, Download, Activity } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const Deliverables: React.FC = () => {
   const items = [
@@ -15,13 +16,35 @@ const Deliverables: React.FC = () => {
   return (
     <Section className="bg-paper">
       <div className="mb-12">
-        <h2 className="font-display font-bold text-4xl md:text-5xl mb-6">What you get inside</h2>
-        <p className="text-xl">Everything you need to ship faster.</p>
+        <motion.h2 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="font-display font-bold text-4xl md:text-5xl mb-6"
+        >
+          What you get inside
+        </motion.h2>
+        <motion.p 
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2 }}
+          className="text-xl"
+        >
+          Everything you need to ship faster.
+        </motion.p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         {items.map((item, i) => (
-          <div key={i} className="group flex items-start gap-4 p-4 border-2 border-transparent hover:border-black hover:bg-white hover:shadow-neo transition-all rounded-lg">
+          <motion.div 
+            key={i} 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: i * 0.1 }}
+            className="group flex items-start gap-4 p-4 border-2 border-transparent hover:border-black hover:bg-white hover:shadow-neo transition-all rounded-lg"
+          >
             <div className="bg-accent p-3 border-2 border-black flex-shrink-0 group-hover:rotate-6 transition-transform duration-300">
               <item.Icon size={24} strokeWidth={2.5} />
             </div>
@@ -29,7 +52,7 @@ const Deliverables: React.FC = () => {
               <h3 className="font-display font-bold text-xl mb-1">{item.title}</h3>
               <p className="text-gray-700 font-medium">{item.desc}</p>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
     </Section>

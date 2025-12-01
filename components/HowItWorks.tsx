@@ -1,49 +1,61 @@
 import React from 'react';
 import Section from './ui/Section';
-import { ArrowRight } from 'lucide-react';
+import PomodoroTimer from './PomodoroTimer';
+import { motion } from 'framer-motion';
 
 const HowItWorks: React.FC = () => {
-  return (
-    <Section className="bg-purple-100">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 mb-16">
-        <h2 className="font-display font-bold text-4xl md:text-5xl flex-shrink-0">How it works</h2>
-        <div className="h-1 bg-black w-full flex-grow hidden md:block"></div>
-        <p className="text-xl font-bold flex-shrink-0">Three steps to Flow State.</p>
-      </div>
+  const steps = [
+    { num: "01", title: "Select Mode", desc: "Choose from Deep Work, Creative Flow, or ADHD Rescue." },
+    { num: "02", title: "Press Play", desc: "AI generates a unique soundscape based on your current state." },
+    { num: "03", title: "Lock In", desc: "Binaural beats entrain your brainwaves to 40Hz (Gamma) focus." },
+  ];
 
-      <div className="grid md:grid-cols-3 gap-8 relative">
-        {[
-          {
-            step: "01",
-            title: "Pick your goal",
-            desc: "Tell FlowState what you're doing: Deep Coding, Creative Writing, or Decompressing."
-          },
-          {
-            step: "02",
-            title: "AI generates the vibe",
-            desc: "Our engine analyzes your time of day and energy levels to create a unique soundscape."
-          },
-          {
-            step: "03",
-            title: "Lock In",
-            desc: "The audio evolves in real-time. No loops. No distractions. Just pure focus."
-          }
-        ].map((item, i) => (
-          <div key={i} className="relative group hover:-translate-y-2 transition-transform duration-300 ease-out">
-            <div className="absolute -top-6 -left-2 font-display font-bold text-8xl text-purple-200 z-0 group-hover:text-accent transition-colors duration-300">
-              {item.step}
-            </div>
-            <div className="relative z-10 border-l-4 border-black pl-6 py-2">
-              <h3 className="font-display font-bold text-2xl mb-2">{item.title}</h3>
-              <p className="font-medium text-lg">{item.desc}</p>
-            </div>
-             {i < 2 && (
-               <div className="hidden md:block absolute top-1/2 -right-6 transform -translate-y-1/2 z-20 animate-bounce-x text-black">
-                 <ArrowRight size={32} strokeWidth={3} />
-               </div>
-             )}
+  return (
+    <Section className="bg-white">
+      <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <div>
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="font-display font-bold text-4xl md:text-5xl mb-6"
+          >
+            Science-backed focus.<br/>
+            <span className="text-gray-400">Not just white noise.</span>
+          </motion.h2>
+          
+          <div className="space-y-8">
+            {steps.map((step, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.2 }}
+                className="flex gap-4 group"
+              >
+                <div className="font-mono font-bold text-accent text-xl mt-1 group-hover:translate-x-1 transition-transform">
+                  {step.num}
+                </div>
+                <div>
+                  <h3 className="font-bold text-xl mb-1">{step.title}</h3>
+                  <p className="text-gray-600">{step.desc}</p>
+                </div>
+              </motion.div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          className="relative"
+        >
+          <div className="absolute -inset-4 bg-accent/20 rounded-full blur-3xl -z-10"></div>
+          <div className="text-center mb-4 font-bold text-gray-500">TRY IT NOW</div>
+          <PomodoroTimer />
+        </motion.div>
       </div>
     </Section>
   );
