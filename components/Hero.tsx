@@ -1,14 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Button from './ui/Button';
 import Section from './ui/Section';
-import { Check, Play, Pause, Settings, Volume2 } from 'lucide-react';
+import { Check, Play, Pause, Volume2 } from 'lucide-react';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import EmailCaptureModal from './EmailCaptureModal';
 
-const Hero: React.FC = () => {
+interface HeroProps {
+  isFocusMode?: boolean;
+}
+
+const Hero: React.FC<HeroProps> = ({ isFocusMode = false }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Audio & Visualizer Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   // Mouse tilt effect
   const x = useMotionValue(0);
@@ -21,17 +32,82 @@ const Hero: React.FC = () => {
     audioRef.current = new Audio('https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=rain-and-thunder-16023.mp3');
     audioRef.current.loop = true;
     audioRef.current.volume = 0.5;
+    audioRef.current.crossOrigin = "anonymous";
 
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
       }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
     };
   }, []);
 
-  const togglePlay = () => {
+  const initAudioContext = () => {
+    if (!audioContextRef.current && audioRef.current) {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      audioContextRef.current = new AudioContext();
+      analyserRef.current = audioContextRef.current.createAnalyser();
+      analyserRef.current.fftSize = 64; // Low resolution for chunky bars
+      
+      sourceRef.current = audioContextRef.current.createMediaElementSource(audioRef.current);
+      sourceRef.current.connect(analyserRef.current);
+      analyserRef.current.connect(audioContextRef.current.destination);
+    }
+  };
+
+  const drawVisualizer = () => {
+    if (!canvasRef.current || !analyserRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const bufferLength = analyserRef.current.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const renderFrame = () => {
+      animationFrameRef.current = requestAnimationFrame(renderFrame);
+      analyserRef.current!.getByteFrequencyData(dataArray);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const barWidth = (canvas.width / bufferLength) * 1.5; // Make bars wider
+      let barHeight;
+      let x = 0;
+
+      for (let i = 0; i < bufferLength; i++) {
+        barHeight = (dataArray[i] / 255) * canvas.height;
+
+        // Dynamic color based on Focus Mode
+        ctx.fillStyle = isFocusMode ? '#a3e635' : '#000000'; // Lime-400 in focus, Black in normal
+
+        // Rounded caps look
+        ctx.fillRect(x, canvas.height - barHeight, barWidth - 2, barHeight);
+        
+        x += barWidth + 1;
+      }
+    };
+
+    renderFrame();
+  };
+
+  const togglePlay = async () => {
     if (audioRef.current) {
+      if (!audioContextRef.current) {
+        initAudioContext();
+        drawVisualizer();
+      }
+      
+      if (audioContextRef.current?.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+
       if (isPlaying) {
         audioRef.current.pause();
       } else {
@@ -56,18 +132,18 @@ const Hero: React.FC = () => {
 
   return (
     <>
-      <Section className="bg-paper min-h-[90vh] flex items-center overflow-hidden relative">
+      <Section className={`min-h-[90vh] flex items-center overflow-hidden relative transition-colors duration-700 ${isFocusMode ? 'bg-zinc-950' : 'bg-paper'}`}>
         {/* Noise Texture Overlay */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0" style={{ backgroundImage: 'url("https://grainy-gradients.vercel.app/noise.svg")' }}></div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-center relative z-10">
           {/* Left: Copy */}
-          <div className="flex flex-col gap-6 items-start">
+          <div className={`flex flex-col gap-6 items-start transition-opacity duration-700 ${isFocusMode ? 'opacity-20 blur-sm hover:opacity-100 hover:blur-0' : 'opacity-100'}`}>
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="inline-block bg-black text-white px-3 py-1 font-bold text-sm -rotate-1"
+              className={`inline-block px-3 py-1 font-bold text-sm -rotate-1 transition-colors duration-700 ${isFocusMode ? 'bg-white text-black' : 'bg-black text-white'}`}
             >
               New: Binaural Beats 2.0
             </motion.div>
@@ -76,11 +152,29 @@ const Hero: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="font-display font-bold text-5xl md:text-7xl leading-[0.95] tracking-tighter"
+              className={`font-display font-bold text-5xl md:text-7xl leading-[0.95] tracking-tighter transition-colors duration-700 ${isFocusMode ? 'text-white' : 'text-black'}`}
             >
-              Turn ADHD into <span className="text-purple-600 relative inline-block">
-                Deep Work.
-                <svg className="absolute w-full h-3 -bottom-1 left-0 text-accent -z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
+              Turn <motion.span 
+                className="inline-block cursor-default"
+                whileHover={{ 
+                  scale: 1.1, 
+                  rotate: -3, 
+                  color: "#ef4444", 
+                  transition: { type: "spring", stiffness: 300 } 
+                }}
+              >ADHD</motion.span> into <span className={`relative inline-block transition-colors duration-700 ${isFocusMode ? 'text-accent' : 'text-purple-600'}`}>
+                <motion.span
+                  className="inline-block cursor-default"
+                  whileHover={{ 
+                    scale: 1.1, 
+                    rotate: 3, 
+                    textShadow: isFocusMode ? "4px 4px 0px #fff" : "4px 4px 0px #000",
+                    transition: { type: "spring", stiffness: 300 } 
+                  }}
+                >
+                  Deep Work.
+                </motion.span>
+                <svg className={`absolute w-full h-3 -bottom-1 left-0 -z-10 transition-colors duration-700 ${isFocusMode ? 'text-white' : 'text-accent'}`} viewBox="0 0 100 10" preserveAspectRatio="none">
                   <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" />
                 </svg>
               </span>
@@ -90,7 +184,7 @@ const Hero: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-xl md:text-2xl font-medium text-gray-800 leading-snug max-w-lg"
+              className={`text-xl md:text-2xl font-medium leading-snug max-w-lg transition-colors duration-700 ${isFocusMode ? 'text-gray-400' : 'text-gray-800'}`}
             >
               AI soundscapes that adapt to your brain. Stop getting distracted.
             </motion.p>
@@ -106,12 +200,20 @@ const Hero: React.FC = () => {
                 "Block noise instantly",
                 "Focus for 4+ hours"
               ].map((benefit, i) => (
-                <li key={i} className="flex items-center gap-3 font-semibold group cursor-default">
-                  <div className="bg-accent p-1 border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] group-hover:bg-purple-400 group-hover:rotate-12 transition-all duration-300">
-                    <Check size={16} strokeWidth={4} />
-                  </div>
+                <motion.li 
+                  key={i} 
+                  className={`flex items-center gap-3 font-semibold group cursor-default w-fit transition-colors duration-700 ${isFocusMode ? 'text-gray-300' : 'text-black'}`}
+                  whileHover={{ x: 10 }}
+                >
+                  <motion.div 
+                    className={`p-1 border shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 group-hover:bg-purple-400 ${isFocusMode ? 'bg-black border-white shadow-[2px_2px_0px_0px_#fff]' : 'bg-accent border-black'}`}
+                    whileHover={{ rotate: 180 }}
+                    transition={{ type: "spring", stiffness: 200 }}
+                  >
+                    <Check size={16} strokeWidth={4} className={isFocusMode ? 'text-white' : 'text-black'} />
+                  </motion.div>
                   {benefit}
-                </li>
+                </motion.li>
               ))}
             </motion.ul>
 
@@ -124,11 +226,11 @@ const Hero: React.FC = () => {
               <Button 
                 onClick={() => setIsModalOpen(true)}
                 size="lg" 
-                className="w-full sm:w-auto hover:scale-105 transition-transform shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
+                className={`w-full sm:w-auto hover:scale-105 transition-transform shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${isFocusMode ? 'bg-white text-black border-white shadow-[6px_6px_0px_0px_#3f3f46]' : ''}`}
               >
                 Start 7-Day Free Trial
               </Button>
-              <p className="text-sm font-bold text-gray-500 text-center sm:text-left">
+              <p className={`text-sm font-bold text-center sm:text-left transition-colors duration-700 ${isFocusMode ? 'text-gray-600' : 'text-gray-500'}`}>
                 No credit card required • Built for solo builders
               </p>
             </motion.div>
@@ -144,9 +246,9 @@ const Hero: React.FC = () => {
             {/* Main Card */}
             <motion.div 
               style={{ rotateX, rotateY }}
-              className="bg-white/90 backdrop-blur-xl border-4 border-black p-6 shadow-neo rounded-xl relative z-10"
+              className={`backdrop-blur-xl border-4 p-6 shadow-neo rounded-xl relative z-10 transition-colors duration-700 ${isFocusMode ? 'bg-black/90 border-white shadow-[8px_8px_0px_0px_#3f3f46]' : 'bg-white/90 border-black'}`}
             >
-              <div className="flex justify-between items-center border-b-2 border-black/10 pb-4 mb-6">
+              <div className={`flex justify-between items-center border-b-2 pb-4 mb-6 transition-colors duration-700 ${isFocusMode ? 'border-white/20' : 'border-black/10'}`}>
                 <div className="flex gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-500 border border-black hover:scale-125 transition-transform"></div>
                   <div className="w-3 h-3 rounded-full bg-yellow-400 border border-black hover:scale-125 transition-transform"></div>
@@ -156,48 +258,37 @@ const Hero: React.FC = () => {
               </div>
 
               <div className="space-y-6">
-                {/* Waveform Visualization Active Animation */}
-                <div className="h-32 bg-gray-50 border-2 border-black flex items-end justify-center gap-1 overflow-hidden px-4 pb-2 relative">
+                {/* Real-time Visualizer Canvas */}
+                <div className={`h-32 border-2 flex items-end justify-center overflow-hidden relative transition-colors duration-700 ${isFocusMode ? 'bg-black border-white' : 'bg-gray-50 border-black'}`}>
                   {/* Overlay for "off" state */}
                   {!isPlaying && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/5 z-10">
                       <span className="font-mono text-xs text-gray-500">PAUSED</span>
                     </div>
                   )}
-                  {[...Array(24)].map((_, i) => (
-                    <motion.div 
-                      key={i} 
-                      className="w-2 bg-black rounded-t-sm" 
-                      animate={isPlaying ? {
-                        height: ["20%", "90%", "20%"],
-                      } : {
-                        height: "20%"
-                      }}
-                      transition={{
-                        duration: 0.6,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                        delay: i * 0.05,
-                        repeatType: "reverse"
-                      }}
-                    ></motion.div>
-                  ))}
+                  
+                  <canvas 
+                    ref={canvasRef} 
+                    width={300} 
+                    height={128} 
+                    className="w-full h-full"
+                  />
                 </div>
 
                 {/* Controls */}
                 <div className="flex justify-between items-center">
                   <div className="flex flex-col">
-                    <span className="font-display font-bold text-2xl">HyperFocus Mode</span>
+                    <span className={`font-display font-bold text-2xl transition-colors duration-700 ${isFocusMode ? 'text-white' : 'text-black'}`}>HyperFocus Mode</span>
                     <span className="font-mono text-sm text-gray-500">Binaural • 40Hz • Rain</span>
                   </div>
                   <button 
                     onClick={togglePlay}
-                    className="group w-16 h-16 bg-accent border-2 border-black rounded-full flex items-center justify-center hover:bg-accent-hover shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-y-1 active:shadow-none"
+                    className={`group w-16 h-16 border-2 rounded-full flex items-center justify-center transition-all active:translate-y-1 active:shadow-none ${isFocusMode ? 'bg-white border-white shadow-[4px_4px_0px_0px_#3f3f46] hover:bg-gray-200' : 'bg-accent border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-accent-hover'}`}
                   >
                     {isPlaying ? (
-                      <Pause size={32} fill="black" />
+                      <Pause size={32} fill={isFocusMode ? "black" : "black"} className={isFocusMode ? "text-black" : "text-black"} />
                     ) : (
-                      <Play size={32} fill="black" className="ml-1" />
+                      <Play size={32} fill={isFocusMode ? "black" : "black"} className={`ml-1 ${isFocusMode ? "text-black" : "text-black"}`} />
                     )}
                   </button>
                 </div>
@@ -205,12 +296,10 @@ const Hero: React.FC = () => {
                 {/* Sliders */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-4 group">
-                    <Volume2 size={20} className="group-hover:rotate-12 transition-transform" />
-                    <div className="flex-1 h-4 bg-gray-200 border-2 border-black rounded-full relative overflow-hidden">
-                      <div className="absolute top-0 left-0 h-full w-[70%] bg-black rounded-l-full"></div>
-                      {/* Animated shine effect on the slider bar */}
-                      <div className="absolute top-0 left-0 h-full w-full bg-white opacity-20 -translate-x-full animate-[shimmer_2s_infinite]"></div>
-                      <div className="absolute top-1/2 -translate-y-1/2 left-[70%] w-6 h-6 bg-white border-2 border-black rounded-full hover:scale-110 transition-transform cursor-pointer shadow-sm z-10"></div>
+                    <Volume2 size={20} className={`group-hover:rotate-12 transition-transform ${isFocusMode ? 'text-white' : 'text-black'}`} />
+                    <div className={`flex-1 h-4 border-2 rounded-full relative overflow-hidden transition-colors duration-700 ${isFocusMode ? 'bg-gray-800 border-white' : 'bg-gray-200 border-black'}`}>
+                      <div className={`absolute top-0 left-0 h-full w-[70%] rounded-l-full transition-colors duration-700 ${isFocusMode ? 'bg-white' : 'bg-black'}`}></div>
+                      <div className={`absolute top-1/2 -translate-y-1/2 left-[70%] w-6 h-6 border-2 rounded-full hover:scale-110 transition-transform cursor-pointer shadow-sm z-10 ${isFocusMode ? 'bg-black border-white' : 'bg-white border-black'}`}></div>
                     </div>
                   </div>
                 </div>
@@ -221,14 +310,14 @@ const Hero: React.FC = () => {
             <motion.div 
               animate={{ y: [0, -10, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="hidden lg:block absolute -bottom-6 -right-6 bg-purple-400 border-2 border-black p-4 shadow-neo z-20 rotate-3"
+              className={`hidden lg:block absolute -bottom-6 -right-6 border-2 p-4 shadow-neo z-20 rotate-3 transition-colors duration-700 ${isFocusMode ? 'bg-purple-900 border-white text-white' : 'bg-purple-400 border-black text-black'}`}
             >
                <span className="font-mono font-bold text-sm">CURRENT STREAK: 12 DAYS</span>
             </motion.div>
             <motion.div 
               animate={{ y: [0, 10, 0] }}
               transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              className="hidden lg:block absolute -top-8 -left-8 bg-yellow-300 border-2 border-black p-3 shadow-neo z-0 -rotate-2"
+              className={`hidden lg:block absolute -top-8 -left-8 border-2 p-3 shadow-neo z-0 -rotate-2 transition-colors duration-700 ${isFocusMode ? 'bg-yellow-600 border-white text-white' : 'bg-yellow-300 border-black text-black'}`}
             >
                <span className="font-display font-bold text-lg">Focus Score: 98/100</span>
             </motion.div>

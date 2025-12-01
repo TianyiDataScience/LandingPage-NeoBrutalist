@@ -11,7 +11,7 @@ const HowItWorks: React.FC = () => {
   ];
 
   return (
-    <Section className="bg-white">
+    <Section id="how-it-works" className="bg-white">
       <div className="grid lg:grid-cols-2 gap-16 items-center">
         <div>
           <motion.h2 
