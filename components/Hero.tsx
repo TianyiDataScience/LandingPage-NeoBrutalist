@@ -27,6 +27,13 @@ const Hero: React.FC<HeroProps> = ({ isFocusMode = false }) => {
   const rotateX = useSpring(useTransform(y, [-300, 300], [5, -5]), { stiffness: 150, damping: 20 });
   const rotateY = useSpring(useTransform(x, [-300, 300], [-5, 5]), { stiffness: 150, damping: 20 });
 
+  // Keep track of focus mode in a ref for the animation loop
+  const isFocusModeRef = useRef(isFocusMode);
+
+  useEffect(() => {
+    isFocusModeRef.current = isFocusMode;
+  }, [isFocusMode]);
+
   useEffect(() => {
     // Initialize audio
     audioRef.current = new Audio('https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=rain-and-thunder-16023.mp3');
@@ -84,8 +91,8 @@ const Hero: React.FC<HeroProps> = ({ isFocusMode = false }) => {
       for (let i = 0; i < bufferLength; i++) {
         barHeight = (dataArray[i] / 255) * canvas.height;
 
-        // Dynamic color based on Focus Mode
-        ctx.fillStyle = isFocusMode ? '#a3e635' : '#000000'; // Lime-400 in focus, Black in normal
+        // Dynamic color based on Focus Mode (read from Ref to avoid stale closure)
+        ctx.fillStyle = isFocusModeRef.current ? '#a3e635' : '#000000'; // Lime-400 in focus, Black in normal
 
         // Rounded caps look
         ctx.fillRect(x, canvas.height - barHeight, barWidth - 2, barHeight);
