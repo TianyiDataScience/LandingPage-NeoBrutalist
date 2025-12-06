@@ -1,27 +1,24 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # FlowState – Deep Focus for Builders
 
 Hi, I'm **Tianyi** (ML PhD → builder @ One-Person AI Lab). I build content engines, prompts, and tools for solo creators.
 
 - AI-generated soundscapes for focus, relaxation, and sleep.
-- Live preview: https://ai.studio/apps/drive/1bi4AISAM6pXaH2fcmUSGxPQcmRZrnkGg
+- Live preview: https://landing-page-neo-brutalist.vercel.app/
 - Tech: React 19 + Vite; pure static front-end, deploy-ready on Vercel/Netlify/Pages.
 
 ## Run Locally
 
 Prerequisite: Node.js
 
-1. Install dependencies: `npm install`  
-2. (Optional) Add `GEMINI_API_KEY` in `.env.local` if you later enable Gemini features  
+1. Install dependencies: `npm install`
+2. (Optional) Add `GEMINI_API_KEY` in `.env.local` if you later enable Gemini features
 3. Run the app: `npm run dev`
 
 <aside>
 ⭐ **Free AI resources**
 
 Free AI Resources+ newsletter: http://onepersonai.beehiiv.com
+
 </aside>
 
 <aside>
@@ -29,6 +26,7 @@ Free AI Resources+ newsletter: http://onepersonai.beehiiv.com
 
 Ready-to-use tools, front-end templates, and AI SaaS starters built on these ideas:  
 ➡️ https://tianyili.gumroad.com/
+
 </aside>
 
 <aside>
@@ -44,4 +42,5 @@ Questions, collabs, or want more AI systems for creators? Reach out:
 
 Best wishes,  
 :fyevtugj_400x400: Tianyi
+
 </aside>
